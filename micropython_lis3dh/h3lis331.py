@@ -18,8 +18,8 @@ import time
 from micropython import const
 from micropython_lis3dh.i2c_helpers import RegisterStruct, CBits
 
-__version__ = "0.0.0+auto.0"
-__repo__ = "https://github.com/jposada202020/MicroPython_LIS3DH.git"
+# __version__ = "0.0.0+auto.0"
+# __repo__ = "https://github.com/jposada202020/MicroPython_LIS3DH.git"
 
 
 _REG_WHOAMI = const(0x0F)
@@ -149,6 +149,10 @@ class H3LIS331:
         self._high_resolution = 1
         self._block_data = 1
         self._adc_pd = 1
+
+    @property
+    def device_id(self):
+        return self._device_id
 
     @property
     def axes_enabled(self):
