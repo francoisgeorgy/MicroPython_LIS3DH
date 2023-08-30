@@ -23,34 +23,37 @@ __repo__ = "https://github.com/jposada202020/MicroPython_LIS3DH.git"
 
 
 _REG_WHOAMI = const(0x0F)
-_REG_TEMPCFG = const(0x1F)
+# _REG_TEMPCFG = const(0x1F)
 _REG_CTRL1 = const(0x20)  # Defaults to 0b00000000
 _REG_CTRL2 = const(0x21)
 _REG_CTRL3 = const(0x22)
 _REG_CTRL4 = const(0x23)
 _REG_CTRL5 = const(0x24)
-_REG_CTRL6 = const(0x25)
+# _REG_FILTER = const(0x25)
 _REG_OUT_X_L = const(0x28)
 # _REG_OUT_X_LM = const(0xA8)
 
+_WHOAMI_LIS331 = 0x32
+_WHOAMI_LIS3DH = 0x33
+
 # Data rate (CTRL_REG1)
-DATARATE_1344 = const(0b1001)  # 1344 Hz
-DATARATE_400 = const(0b0111)  # 400Hz
-DATARATE_200 = const(0b0110)  # 200Hz
-DATARATE_100 = const(0b0101)  # 100Hz
-DATARATE_50 = const(0b0100)  # 50Hz
-DATARATE_25 = const(0b0011)  # 25Hz
-DATARATE_10 = const(0b0010)  # 10 Hz
-DATARATE_1 = const(0b0001)  # 1 Hz
+DATARATE_1000 = const(0b11)  # 1000 Hz
+DATARATE_400 = const(0b10)  # 400Hz
+# DATARATE_200 = const(0b0110)  # 200Hz
+DATARATE_100 = const(0b01)  # 100Hz
+DATARATE_50 = const(0b00)  # 50Hz
+# DATARATE_25 = const(0b0011)  # 25Hz
+# DATARATE_10 = const(0b0010)  # 10 Hz
+# DATARATE_1 = const(0b0001)  # 1 Hz
 DATARATE_POWERDOWN = const(0)
-DATARATE_LOWPOWER_1K6HZ = const(0b1000)
-DATARATE_LOWPOWER_5KHZ = const(0b1001)
+# DATARATE_LOWPOWER_1K6HZ = const(0b1000)
+# DATARATE_LOWPOWER_5KHZ = const(0b1001)
 
 # Data Range
 DATARANGE_2 = const(0b00)  # +/- 2g (default value)
 DATARANGE_4 = const(0b01)  # +/- 4g
-DATARANGE_8 = const(0b10)  # +/- 8g
-DATARANGE_16 = const(0b11)  # +/- 16g
+DATARANGE_8 = const(0b11)  # +/- 8g
+# DATARANGE_16 = const(0b11)  # +/- 16g
 
 # Axes Enabling
 AXES_X = const(0b001)
@@ -61,11 +64,18 @@ AXES_Z_X = const(0b101)
 AXES_Z_Y = const(0b110)
 AXES_Z_Y_X = const(0b111)
 
+FILTER_MODE_NORMAL = const(0b00)
+FILTER_MODE_REFERENCE = const(0b01)
+# FILTER_MODE_NORMAL2 = const()
+FILTER_COEFF_1 = const(0b00)
+FILTER_COEFF_2 = const(0b01)
+FILTER_COEFF_3 = const(0b10)
+FILTER_COEFF_4 = const(0b11)
 
-class LIS3DH:
+class LIS331:
     """Main class for the Sensor
 
-    :param ~machine.I2C i2c: The I2C bus the LIS3DH is connected to.
+    :param ~machine.I2C i2c: The I2C bus the LIS331 is connected to.
     :param int address: The I2C device address. Defaults to :const:`0x18`
 
     :raises RuntimeError: if the sensor is not found
@@ -73,26 +83,26 @@ class LIS3DH:
 
     **Quickstart: Importing and using the device**
 
-    Here is an example of using the :class:`lis3dh.LIS3DH` class.
+    Here is an example of using the :class:`lis331.LIS331` class.
     First you will need to import the libraries to use the sensor
 
     .. code-block:: python
 
         from machine import Pin, I2C
-        from micropython_lis3dh import lis3dh
+        from micropython_lis331 import lis331
 
     Once this is done you can define your `machine.I2C` object and define your sensor object
 
     .. code-block:: python
 
         i2c = I2C(sda=Pin(8), scl=Pin(9))  # Correct I2C pins for UM FeatherS2
-        lis = lis3dh.LIS3DH(i2c)
+        lis = lis331.LIS331(i2c)
 
     Now you have access to the :attr:`acceleration` attribute
 
     .. code-block:: python
 
-        acc_x, acc_y, acc_z = lis3dh.acceleration
+        acc_x, acc_y, acc_z = lis331.acceleration
 
     """
 
@@ -101,15 +111,15 @@ class LIS3DH:
     _reboot_register = RegisterStruct(_REG_CTRL5, "B")
     _ctrl4_register = RegisterStruct(_REG_CTRL4, "B")
     _reg_xl = RegisterStruct(_REG_OUT_X_L, "<hhh")
-    _temp_comp = RegisterStruct(_REG_TEMPCFG, "B")
+    # _temp_comp = RegisterStruct(_REG_TEMPCFG, "B")
 
     # CTRL_REG1 (20h) ODR3|ODR2|ODR1|ODR0|LPen|Zen|Yen|Xen
-    _axes_enabled = CBits(3, _REG_CTRL1, 3)  # Zen|Yen|Xen
-    _data_rate = CBits(4, _REG_CTRL1, 4)  # ODR3|ODR2|ODR1|ODR0
+    _axes_enabled = CBits(3, _REG_CTRL1, 0)  # Zen|Yen|Xen
+    _data_rate = CBits(2, _REG_CTRL1, 3)  # DR1|DR0
 
     # TEMP_CFG_REG (1Fh) ADC_PD|TEMP_EN
-    _adc_pd = CBits(1, _REG_TEMPCFG, 7)
-    _temp_en = CBits(1, _REG_TEMPCFG, 6)
+    # _adc_pd = CBits(1, _REG_TEMPCFG, 7)
+    # _temp_en = CBits(1, _REG_TEMPCFG, 6)
 
     # CTRL_REG4 (23h) BDU|BLE|FS1|FS0|HR|ST1|ST0|SIM
     _range = CBits(2, _REG_CTRL4, 4)  # FS1|FS0
@@ -119,6 +129,9 @@ class LIS3DH:
     # CTRL_REG5 (24h) BOOT
     _reboot = CBits(1, _REG_CTRL5, 7)
 
+    # HPCF[1:0]
+    _filter_coeff = CBits(2, _REG_CTRL2, 0)
+
     # Conversion Values
     acceleration_scale = {0: 16380, 1: 8190, 2: 4096, 3: 1365}
 
@@ -126,8 +139,8 @@ class LIS3DH:
         self._i2c = i2c
         self._address = address
 
-        if self._device_id != 0x33:
-            raise RuntimeError("Failed to find LIS3DH!")
+        if self._device_id != _WHOAMI_LIS331:
+            raise RuntimeError("Failed to find LIS331")
         self._reboot = 1
         time.sleep(0.01)
 
@@ -146,19 +159,19 @@ class LIS3DH:
         +--------------------------------------------+-------------------------+
         | Mode                                       | Value                   |
         +============================================+=========================+
-        | :py:const:`lis3dh.AXES_X`                  | :py:const:`0b001`       |
+        | :py:const:`lis331.AXES_X`                  | :py:const:`0b001`       |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.AXES_Y`                  | :py:const:`0b010`       |
+        | :py:const:`lis331.AXES_Y`                  | :py:const:`0b010`       |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.AXES_X_Y`                | :py:const:`0b011`       |
+        | :py:const:`lis331.AXES_X_Y`                | :py:const:`0b011`       |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.AXES_Z`                  | :py:const:`0b100`       |
+        | :py:const:`lis331.AXES_Z`                  | :py:const:`0b100`       |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.AXES_Z_X`                | :py:const:`0b101`       |
+        | :py:const:`lis331.AXES_Z_X`                | :py:const:`0b101`       |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.AXES_Z_Y`                | :py:const:`0b110`       |
+        | :py:const:`lis331.AXES_Z_Y`                | :py:const:`0b110`       |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.AXES_Z_Y_X`              | :py:const:`0b111`       |
+        | :py:const:`lis331.AXES_Z_Y_X`              | :py:const:`0b111`       |
         +--------------------------------------------+-------------------------+
 
 
@@ -179,27 +192,27 @@ class LIS3DH:
         +--------------------------------------------+-------------------------+
         | Mode                                       | Value                   |
         +============================================+=========================+
-        | :py:const:`lis3dh.DATARATE_1`              | :py:const:`0b0001`      |
+        | :py:const:`lis331.DATARATE_1`              | :py:const:`0b0001`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_10`             | :py:const:`0b0010`      |
+        | :py:const:`lis331.DATARATE_10`             | :py:const:`0b0010`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_25`             | :py:const:`0b0011`      |
+        | :py:const:`lis331.DATARATE_25`             | :py:const:`0b0011`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_50`             | :py:const:`0b0100`      |
+        | :py:const:`lis331.DATARATE_50`             | :py:const:`0b0100`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_100`            | :py:const:`0b0101`      |
+        | :py:const:`lis331.DATARATE_100`            | :py:const:`0b0101`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_200`            | :py:const:`0b0110`      |
+        | :py:const:`lis331.DATARATE_200`            | :py:const:`0b0110`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_400`            | :py:const:`0b0111`      |
+        | :py:const:`lis331.DATARATE_400`            | :py:const:`0b0111`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_1344`           | :py:const:`0b1001`      |
+        | :py:const:`lis331.DATARATE_1344`           | :py:const:`0b1001`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_POWERDOWN`      | :py:const:`0b0000`      |
+        | :py:const:`lis331.DATARATE_POWERDOWN`      | :py:const:`0b0000`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_LOWPOWER_1600`  | :py:const:`0b1000`      |
+        | :py:const:`lis331.DATARATE_LOWPOWER_1600`  | :py:const:`0b1000`      |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARATE_LOWPOWER_5000`  | :py:const:`0b1001`      |
+        | :py:const:`lis331.DATARATE_LOWPOWER_5000`  | :py:const:`0b1001`      |
         +--------------------------------------------+-------------------------+
 
         """
@@ -212,20 +225,20 @@ class LIS3DH:
 
     @property
     def data_range(self):
-        """The range of the accelerometer. The LIS3DH has dynamically user
+        """The range of the accelerometer. The LIS331 has dynamically user
         selectable full scales of ±2g/±4g/±8g/±16g and it is capable of
         measuring accelerations with output data rates from 1 Hz to 5 kHz.
 
         +--------------------------------------------+-------------------------+
         | Mode                                       | Value                   |
         +============================================+=========================+
-        | :py:const:`lis3dh.DATARANGE_2`             | :py:const:`0b00`        |
+        | :py:const:`lis331.DATARANGE_2`             | :py:const:`0b00`        |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARANGE_4`             | :py:const:`0b01`        |
+        | :py:const:`lis331.DATARANGE_4`             | :py:const:`0b01`        |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARANGE_8`             | :py:const:`0b10`        |
+        | :py:const:`lis331.DATARANGE_8`             | :py:const:`0b10`        |
         +--------------------------------------------+-------------------------+
-        | :py:const:`lis3dh.DATARANGE_16`            | :py:const:`0b11`        |
+        | :py:const:`lis331.DATARANGE_16`            | :py:const:`0b11`        |
         +--------------------------------------------+-------------------------+
 
 
