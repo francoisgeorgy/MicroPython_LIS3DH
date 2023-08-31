@@ -1,9 +1,11 @@
 from machine import Pin, I2C
 from time import sleep
+import struct
+import time
 
 address = 0x18
 
-i2c = I2C(0, sda=Pin(0), scl=Pin(1))  # Correct I2C pins for UM FeatherS2
+i2c = I2C(id=0, sda=Pin(0), scl=Pin(1), freq=400000)  # Correct I2C pins for UM FeatherS2
 
 devices = i2c.scan()
 if len(devices) == 0:
@@ -13,14 +15,89 @@ else:
     for device in devices:
         print("Decimal address: ", device, " | Hex address: ", hex(device))
 
-# sleep(1)
-
 # _REG_WHOAMI = const(0x0F)
 # I2C.readfrom_mem(addr, memaddr, nbytes, *, addrsize=8)
-reg = i2c.readfrom_mem(0x18, 0x0f, 1)
-# reg = i2c.readfrom_mem(24, 15, 1)
+# reg = i2c.readfrom_mem(0x18, 0x0f, 1)
 
-print(reg)
+
+# Once the device is powered up it automatically downloads the calibration coefficients from
+# the embedded Flash memory to the internal registers. When the boot procedure is complete
+# (i.e. after about 5 milliseconds), the device automatically enters power-down mode.
+# To turn on the device and gather acceleration data, it is necessary to select one of the
+# operating modes through the CTRL_REG1 register, and to enable at least one of the axes.
+
+# The following general-purpose sequence can be used to configure the device:
+# 1. Write CTRL_REG1.
+# 2. Write CTRL_REG2.
+# 3. Write CTRL_REG3.
+# 4. Write CTRL_REG4.
+# 5. Write REFERENCE.
+# 6. Write INT1_THS.
+# 7. Write INT1_DUR.
+# 8. Write INT2_THS.
+# 9. Write INT2_DUR.
+# 10. Read HP_FILTER_RESET (if filter is enabled).
+# 11. Write INT1_CFG.
+# 12. Write INT2_CFG.
+# 13. Write CTRL_REG5.
+
+time.sleep(0.1)
+
+# 1. Write CTRL_REG1 :
+# PM2 PM1 PM0 DR1 DR0 Zen Yen Xen
+# buf = struct.pack('B', 0b00110111)
+# i2c.writeto_mem(0x18, 0x20, buf)
+# time.sleep(0.1)
+
+# 2. Write CTRL_REG2 :
+# BOOT HPM1 HPM0 FDS HPen2 HPen1 HPCF1 HPCF0
+buf = struct.pack('B', 0b00000000)  # filter off
+# buf = struct.pack('B', 0b10010000)  # boot, filter on
+i2c.writeto_mem(0x18, 0x21, buf)
+time.sleep(0.1)
+
+# 4. Write CTRL_REG4 :
+# BDU BLE FS1 FS0 0 0 0 SIM
+buf = struct.pack('B', 0b01000000)  # BLE=1 data MSB @ lower address
+i2c.writeto_mem(0x18, 0x23, buf)
+time.sleep(0.1)
+
+# 13. Write CTRL_REG5 :
+# 0 0 0 0 0 0 TurnOn1 TurnOn0
+# buf = struct.pack('B', 0b00000011)
+# buf = struct.pack('B', 0b00000000)
+# i2c.writeto_mem(0x18, 0x24, buf)
+# time.sleep(0.1)
+
+# read acceleration
+
+# The device features a STATUS_REG register that should be polled to check when a new set of data is available. The read procedure is the following:
+# 1. Read STATUS_REG.
+# 2. If STATUS_REG[3] = ZYXDA = 0, then go to 1.
+# 3. If STATUS_REG[7] = ZYXOR = 1, then some data have been overwritten.
+# 4. Read OUTX_L.
+# 5. Read OUTX_H.
+# 6. Read OUTY_L.
+# 7. Read OUTY_H.
+# 8. Read OUTZ_L.
+# 9. Read OUTZ_H.
+# 10. Data processing.
+# 11. Go to 1.
+
+for _ in range(50):
+    # 1. Read STATUS_REG :
+    # s = i2c.readfrom_mem(0x18, 0x27, 1)
+    # print("status", s)
+    # value = i2c.readfrom_mem(0x18, 0x28, 6)
+
+    # memoryview objects allow Python code to access the internal data
+    # of an object that supports the buffer protocol without copying.
+
+    value = struct.unpack("<hhh", memoryview(i2c.readfrom_mem(0x18, 0x28, struct.calcsize("<hhh"))))
+
+    print(value)
+    time.sleep(0.5)
+    
 # buf = bytearray(1)
 # i2c.readfrom_into(address, buf)
 

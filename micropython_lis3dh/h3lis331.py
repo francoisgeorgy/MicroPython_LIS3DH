@@ -34,6 +34,7 @@ _REG_OUT_X_L = const(0x28)
 # _REG_OUT_X_LM = const(0xA8)
 
 _WHOAMI_LIS331 = 0x32
+_WHOAMI_H3LIS331 = 0x32
 _WHOAMI_LIS3DH = 0x33
 
 # Data rate (CTRL_REG1)
@@ -139,16 +140,16 @@ class H3LIS331:
         self._i2c = i2c
         self._address = address
 
-        if self._device_id != _WHOAMI_LIS331:
-            raise RuntimeError("Failed to find LIS331")
-        self._reboot = 1
+        if self._device_id != _WHOAMI_H3LIS331:
+            raise RuntimeError("Failed to find H3LIS331")
+        # self._reboot = 1
         time.sleep(0.01)
 
         self._axes_enabled = AXES_Z_Y_X
         self._data_rate = DATARATE_400
-        self._high_resolution = 1
-        self._block_data = 1
-        self._adc_pd = 1
+        # self._high_resolution = 1
+        # self._block_data = 1
+        # self._adc_pd = 1
 
     @property
     def device_id(self):
@@ -267,9 +268,11 @@ class H3LIS331:
 
         return (x / factor) * 9.806, (y / factor) * 9.806, (z / factor) * 9.806
 
+    @property
     def raw(self):
         """
         The x, y, z acceleration values returned as is
         """
+        x, y, z = self._reg_xl
 
-        return self._reg_xl
+        return x, y, z
