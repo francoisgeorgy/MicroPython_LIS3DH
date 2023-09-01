@@ -45,20 +45,24 @@ time.sleep(0.1)
 
 # 1. Write CTRL_REG1 :
 # PM2 PM1 PM0 DR1 DR0 Zen Yen Xen
-# buf = struct.pack('B', 0b00110111)
-# i2c.writeto_mem(0x18, 0x20, buf)
-# time.sleep(0.1)
+#   0   0   1   0   0   1   1   1
+# buf = struct.pack('B', 0b00110111)    0x37
+buf = struct.pack('B', 0b00100111)  # normal mode, 50 hz, xyz enabled
+i2c.writeto_mem(0x18, 0x20, buf)
+time.sleep(0.1)
 
 # 2. Write CTRL_REG2 :
 # BOOT HPM1 HPM0 FDS HPen2 HPen1 HPCF1 HPCF0
-buf = struct.pack('B', 0b00000000)  # filter off
-# buf = struct.pack('B', 0b10010000)  # boot, filter on
-i2c.writeto_mem(0x18, 0x21, buf)
-time.sleep(0.1)
+# buf = struct.pack('B', 0b00000000)  # filter off
+# # buf = struct.pack('B', 0b10010000)  # boot, filter on
+# i2c.writeto_mem(0x18, 0x21, buf)
+# time.sleep(0.1)
 
 # 4. Write CTRL_REG4 :
 # BDU BLE FS1 FS0 0 0 0 SIM
-buf = struct.pack('B', 0b01000000)  # BLE=1 data MSB @ lower address
+#   1   1   0   0 0 0 0   0
+# buf = struct.pack('B', 0b01000000)  # BLE=1 data MSB @ lower address
+buf = struct.pack('B', 0b11000000)  # BDU, BLE=1 data MSB @ lower address
 i2c.writeto_mem(0x18, 0x23, buf)
 time.sleep(0.1)
 
@@ -84,6 +88,7 @@ time.sleep(0.1)
 # 10. Data processing.
 # 11. Go to 1.
 
+n = struct.calcsize("<hhh")
 for _ in range(50):
     # 1. Read STATUS_REG :
     # s = i2c.readfrom_mem(0x18, 0x27, 1)
@@ -93,7 +98,7 @@ for _ in range(50):
     # memoryview objects allow Python code to access the internal data
     # of an object that supports the buffer protocol without copying.
 
-    value = struct.unpack("<hhh", memoryview(i2c.readfrom_mem(0x18, 0x28, struct.calcsize("<hhh"))))
+    value = struct.unpack("<hhh", memoryview(i2c.readfrom_mem(0x18, 0x28, n)))
 
     print(value)
     time.sleep(0.5)
