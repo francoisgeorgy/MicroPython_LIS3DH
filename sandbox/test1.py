@@ -5,7 +5,7 @@ import time
 
 address = 0x18
 
-i2c = I2C(id=0, sda=Pin(0), scl=Pin(1), freq=400000)  # Correct I2C pins for UM FeatherS2
+i2c = I2C(id=0, sda=Pin(0), scl=Pin(1), freq=100000)  # Correct I2C pins for UM FeatherS2
 
 devices = i2c.scan()
 if len(devices) == 0:
@@ -54,7 +54,7 @@ time.sleep(0.1)
 # 2. Write CTRL_REG2 :
 # BOOT HPM1 HPM0 FDS HPen2 HPen1 HPCF1 HPCF0
 # buf = struct.pack('B', 0b00000000)  # filter off
-# # buf = struct.pack('B', 0b10010000)  # boot, filter on
+# buf = struct.pack('B', 0b10010000)  # boot, filter on
 # i2c.writeto_mem(0x18, 0x21, buf)
 # time.sleep(0.1)
 
@@ -62,9 +62,14 @@ time.sleep(0.1)
 # BDU BLE FS1 FS0 0 0 0 SIM
 #   1   1   0   0 0 0 0   0
 # buf = struct.pack('B', 0b01000000)  # BLE=1 data MSB @ lower address
-buf = struct.pack('B', 0b11000000)  # BDU, BLE=1 data MSB @ lower address
+# buf = struct.pack('B', 0b11000000)  # BDU, BLE=1 data MSB @ lower address
+buf = struct.pack('B', 0b10000000)  # BDU, BLE=0 data MSB @ lower address
 i2c.writeto_mem(0x18, 0x23, buf)
 time.sleep(0.1)
+
+# “Little endian” means that the low-order byte of the number is stored in memory at the lowest address,
+# and the high-order byte at the highest address (the little end comes first). This mode corresponds to
+# bit BLE in the CTRL_REG4 reset to 0 (default configuration).
 
 # 13. Write CTRL_REG5 :
 # 0 0 0 0 0 0 TurnOn1 TurnOn0
@@ -91,16 +96,23 @@ time.sleep(0.1)
 n = struct.calcsize("<hhh")
 for _ in range(50):
     # 1. Read STATUS_REG :
-    # s = i2c.readfrom_mem(0x18, 0x27, 1)
-    # print("status", s)
-    # value = i2c.readfrom_mem(0x18, 0x28, 6)
+    s = i2c.readfrom_mem(0x18, 0x27, 1)
+    print("status", hex(s[0]))
 
-    # memoryview objects allow Python code to access the internal data
-    # of an object that supports the buffer protocol without copying.
+    # value = i2c.readfrom_mem(0x18, 0x28 | 0x80, 6)    #  | 0x80 for auto-increment
+    value = struct.unpack("<hhh", memoryview(i2c.readfrom_mem(0x18, 0x28 | 0x80, n)))
+    print("VALUES", value)
+    # print("VALUES", value[0], value[1])
 
-    value = struct.unpack("<hhh", memoryview(i2c.readfrom_mem(0x18, 0x28, n)))
+    # data = bytearray(2)
+    # i2c.readfrom_mem_into(0x18, 0x28, data)
+    # # value = struct.unpack("<hhh", memoryview(i2c.readfrom_mem(0x18, 0x28, n)))
+    # print("DATA", data[0], data[1])
 
-    print(value)
+    # xl = i2c.readfrom_mem(0x18, 0x28, 1)
+    # xh = i2c.readfrom_mem(0x18, 0x29, 1)
+    # print("XL", xl[0], "XH", xh[0])
+
     time.sleep(0.5)
     
 # buf = bytearray(1)

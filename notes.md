@@ -1,3 +1,10 @@
+# 2's complement
+
+    while True: 
+        h, l = bus.readfrom_mem(0x68, 0x3b, 2)
+        print (-((((h<<8)+l)^0xFFFF) + 1) if (h & (1<<7)) else (h<<8)+l)
+
+
 # H3LIS331 init
 
 https://github.com/ncdcommunity/Raspberry_Pi_H3LIS331DL_3Axis_Accelerometer_Sensor_Python_library/blob/master/H3LIS331DL.py
