@@ -31,7 +31,7 @@ _REG_CTRL4 = const(0x23)
 _REG_CTRL5 = const(0x24)
 _REG_CTRL6 = const(0x25)
 _REG_OUT_X_L = const(0x28)
-# _REG_OUT_X_LM = const(0xA8)
+_REG_OUT_X_LM = const(0xA8)
 
 # Data rate (CTRL_REG1)
 DATARATE_1344 = const(0b1001)  # 1344 Hz
@@ -100,7 +100,7 @@ class LIS3DH:
     _device_control = RegisterStruct(_REG_CTRL1, "B")
     _reboot_register = RegisterStruct(_REG_CTRL5, "B")
     _ctrl4_register = RegisterStruct(_REG_CTRL4, "B")
-    _reg_xl = RegisterStruct(_REG_OUT_X_L, "<hhh")
+    _reg_xl = RegisterStruct(_REG_OUT_X_LM, "<hhh")
     _temp_comp = RegisterStruct(_REG_TEMPCFG, "B")
 
     # CTRL_REG1 (20h) ODR3|ODR2|ODR1|ODR0|LPen|Zen|Yen|Xen
@@ -249,3 +249,12 @@ class LIS3DH:
         factor = self.acceleration_scale[self.data_range]
 
         return (x / factor) * 9.806, (y / factor) * 9.806, (z / factor) * 9.806
+
+    @property
+    def raw(self):
+        """
+        The x, y, z acceleration values returned as is
+        """
+        x, y, z = self._reg_xl
+
+        return x, y, z

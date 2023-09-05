@@ -53,10 +53,12 @@ time.sleep(0.1)
 
 # 2. Write CTRL_REG2 :
 # BOOT HPM1 HPM0 FDS HPen2 HPen1 HPCF1 HPCF0
+#    1    0    0   1     0     0     1     1
 # buf = struct.pack('B', 0b00000000)  # filter off
 # buf = struct.pack('B', 0b10010000)  # boot, filter on
-# i2c.writeto_mem(0x18, 0x21, buf)
-# time.sleep(0.1)
+buf = struct.pack('B', 0b00010011)  # filter on
+i2c.writeto_mem(0x18, 0x21, buf)
+time.sleep(0.1)
 
 # 4. Write CTRL_REG4 :
 # BDU BLE FS1 FS0 0 0 0 SIM
@@ -94,14 +96,13 @@ time.sleep(0.1)
 # 11. Go to 1.
 
 n = struct.calcsize("<hhh")
-for _ in range(50):
-    # 1. Read STATUS_REG :
-    s = i2c.readfrom_mem(0x18, 0x27, 1)
-    print("status", hex(s[0]))
+while True:    # 1. Read STATUS_REG :
+    # s = i2c.readfrom_mem(0x18, 0x27, 1)
+    # print("status", hex(s[0]))
 
     # value = i2c.readfrom_mem(0x18, 0x28 | 0x80, 6)    #  | 0x80 for auto-increment
     value = struct.unpack("<hhh", memoryview(i2c.readfrom_mem(0x18, 0x28 | 0x80, n)))
-    print("VALUES", value)
+    print(f'{value[0]:5} {value[1]:5} {value[2]:5}')
     # print("VALUES", value[0], value[1])
 
     # data = bytearray(2)
@@ -113,7 +114,7 @@ for _ in range(50):
     # xh = i2c.readfrom_mem(0x18, 0x29, 1)
     # print("XL", xl[0], "XH", xh[0])
 
-    time.sleep(0.5)
+    time.sleep(0.2)
     
 # buf = bytearray(1)
 # i2c.readfrom_into(address, buf)
